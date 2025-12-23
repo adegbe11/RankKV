@@ -14,8 +14,5 @@ export default defineConfig({
         tiktokTrends: 'article-tiktok-trends.html'
       }
     }
-  },
-  define: {
-    'process.env': {}
   }
 });
