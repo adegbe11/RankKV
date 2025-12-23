@@ -73,9 +73,10 @@ const App: React.FC = () => {
         const resultsEl = document.getElementById('results-view');
         if (resultsEl) resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('RankKV analysis engines are temporarily overloaded. Please wait 10 seconds and try again.');
+      const msg = err.message || 'RankKV analysis engines are temporarily overloaded. Please wait 10 seconds and try again.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -116,9 +117,12 @@ const App: React.FC = () => {
         
         {error && (
           <div className="max-w-4xl mx-auto px-4 mb-12">
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-8 py-5 rounded-[2rem] flex items-center gap-4 shadow-sm">
-              <i className="fas fa-exclamation-triangle text-xl"></i>
-              <span className="font-bold text-lg">{error}</span>
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-8 py-5 rounded-[2rem] flex flex-col gap-2 shadow-sm">
+              <div className="flex items-center gap-4">
+                <i className="fas fa-exclamation-triangle text-xl"></i>
+                <span className="font-bold text-lg">Search Failed</span>
+              </div>
+              <p className="text-sm opacity-80 pl-10">{error}</p>
             </div>
           </div>
         )}
