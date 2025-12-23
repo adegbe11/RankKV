@@ -1,0 +1,7 @@
+{
+  "name": "RankKV - Free Keyword Search Volume Checker",
+  "description": "RankKV.com provides high-performance SEO tools for real-time keyword search volume, CPC, competition analysis, and AI-powered semantic suggestions.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
