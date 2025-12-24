@@ -32,9 +32,24 @@ const BRAND_LOGOS = [
 ];
 
 const TRENDING_KEYWORDS = [
-  "how to use ai for seo", "best mechanical keyboards 2025", "tiktok marketing strategy",
-  "amazon fba keywords", "sustainable fashion brands", "remote developer jobs",
-  "crypto market trends", "vegan meal prep ideas"
+  // AI & Tech
+  "how to use ai for seo", "best generative ai tools 2025", "chatgpt prompt engineering", 
+  "best mechanical keyboards", "top saas products for remote work", "nvidia stock analysis",
+  // Marketing & Social
+  "tiktok marketing strategy 2025", "instagram reels algorithm tips", "zero click search strategy",
+  "youtube shorts monetization", "best email marketing software", "ugc creator guide",
+  // E-commerce
+  "amazon fba product research", "high ticket dropshipping niches", "shopify vs woocommerce 2025",
+  "sustainable fashion brands", "best etsy shops for digital products", "print on demand ideas",
+  // Health & Lifestyle
+  "vegan meal prep for beginners", "best supplements for focus", "morning routine for productivity",
+  "clean beauty brands reviews", "best home workout equipment", "meditation apps 2025",
+  // Finance & Business
+  "passive income streams for 2025", "crypto market trends", "bitcoin price forecast",
+  "best high yield savings accounts", "real estate investing for beginners", "side hustle ideas for moms",
+  // Travel & Niche
+  "best places to visit in japan", "affordable travel destinations europe", "van life conversion cost",
+  "digital nomad visas 2025", "sustainable travel tips", "best hiking trails usa"
 ];
 
 const SearchHero: React.FC<SearchHeroProps> = ({ onSearch, isLoading, externalConfig }) => {
@@ -50,9 +65,10 @@ const SearchHero: React.FC<SearchHeroProps> = ({ onSearch, isLoading, externalCo
   }, [externalConfig]);
 
   useEffect(() => {
+    // Shuffle or random start could be added here for more variety
     const interval = setInterval(() => {
       setTickerIndex((prev) => (prev + 1) % TRENDING_KEYWORDS.length);
-    }, 4000);
+    }, 3500); // Slightly faster rotation
     return () => clearInterval(interval);
   }, []);
 
