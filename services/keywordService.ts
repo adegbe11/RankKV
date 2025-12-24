@@ -2,25 +2,27 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { KeywordAnalysis, SearchConfig } from "../types";
 
 export const getKeywordAnalysis = async (config: SearchConfig): Promise<KeywordAnalysis> => {
-  if (!process.env.API_KEY) {
-    throw new Error("RankKV API Configuration Error: Missing API Key. Please ensure API_KEY is set in your environment.");
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+    throw new Error("RankKV Configuration Error: API_KEY is missing. If you are the owner, please set the API_KEY environment variable in your hosting dashboard.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   
-  const prompt = `Perform a high-precision, REAL-TIME SEO analysis for the query: "${config.query}" on the platform "${config.platform}" for the region "${config.country}" (Language: ${config.language}).
+  const prompt = `Task: Perform a deep SEO keyword analysis for the query "${config.query}" on the platform "${config.platform}".
+  Region: ${config.country}
+  Language: ${config.language}
+
+  Instructions:
+  1. Estimate monthly search volume (REAL-TIME 2024/2025 data).
+  2. Estimate CPC in USD and competition difficulty (0 to 1).
+  3. Generate 12 months of historical/forecasted trend data.
+  4. Provide exactly 12 long-tail keyword variations.
+  5. Create 3 topical clusters for site architecture.
+  6. Provide a 2-sentence SEO strategy summary.
   
-  DATA REQUIREMENTS:
-  1. Use real-time web data to estimate current monthly search volumes for the 2024-2025 period.
-  2. Provide estimated USD CPC and competition scores (0-1).
-  3. Analyze search intent (Informational, Transactional, Commercial, Navigational).
-  4. Generate a 12-month historical/predicted trend data points.
-  5. Identify 12 highly relevant long-tail variations with volume, cpc, and intent.
-  6. Create 3 topical authority clusters (groups of related keywords for content siloing).
-  7. If this is a local search (contains "near me", "in [City]", etc.), factor in the specific geography.
-  8. Provide a concise 2-sentence AI SEO strategy summary.
-  
-  Return a strictly valid JSON object following the provided schema.`;
+  You MUST return ONLY a JSON object. No preamble, no markdown formatting.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -93,20 +95,21 @@ export const getKeywordAnalysis = async (config: SearchConfig): Promise<KeywordA
     });
 
     const text = response.text || "";
-    const baseResult = JSON.parse(text);
-    
-    // Extract grounding sources for transparency
-    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-      title: chunk.web?.title || 'Search Source',
-      uri: chunk.web?.uri || ''
-    })).filter((s: any) => s.uri) || [];
+    const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const result = JSON.parse(cleanJson);
 
-    return { ...baseResult, sources };
-  } catch (e: any) {
-    console.error("RankKV Engine Error:", e);
-    if (e.message?.includes("API_KEY")) {
-      throw e;
-    }
-    throw new Error("RankKV engine received an unexpected response. This usually happens if the search intent is blocked or the API key is invalid.");
+    // Filter and format grounding sources
+    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+      ?.map((chunk: any) => ({
+        title: chunk.web?.title || 'Search Source',
+        uri: chunk.web?.uri || ''
+      }))
+      .filter((s: any) => s.uri) || [];
+
+    return { ...result, sources };
+  } catch (error: any) {
+    console.error("RankKV Engine Error:", error);
+    if (error.message?.includes("API_KEY")) throw error;
+    throw new Error("RankKV failed to process the request. This can happen if the query is blocked by safety filters or the API is currently throttled.");
   }
 };

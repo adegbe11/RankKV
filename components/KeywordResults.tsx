@@ -157,14 +157,14 @@ const KeywordResults: React.FC<KeywordResultsProps> = ({ data, onKeywordClick })
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm">
+          <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm min-h-[400px]">
             <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center justify-between">
               Trend Forecast
               <span className="text-[10px] font-black text-[#e2b07e] uppercase bg-[#e2b07e]/10 px-4 py-1.5 rounded-full">KV Prediction</span>
             </h3>
-            <div className="h-64 w-full">
+            <div className="h-64 w-full" style={{ minHeight: '256px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.trend}>
+                <AreaChart data={data.trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
@@ -234,12 +234,12 @@ const KeywordResults: React.FC<KeywordResultsProps> = ({ data, onKeywordClick })
         </div>
 
         <div className="space-y-8">
-          <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden border border-white/5">
+          <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden border border-white/5 min-h-[350px]">
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#e2b07e] rounded-full blur-[60px] opacity-20"></div>
             <h3 className="text-xl font-black mb-10 flex items-center gap-3">
               <i className="fas fa-chart-pie text-[#e2b07e]"></i> Search Intent Mix
             </h3>
-            <div className="h-48 w-full mb-8">
+            <div className="h-48 w-full mb-8" style={{ minHeight: '192px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -312,7 +312,6 @@ const KeywordResults: React.FC<KeywordResultsProps> = ({ data, onKeywordClick })
         </div>
       </div>
 
-      {/* Topical Clusters Section */}
       <div className="bg-slate-900 rounded-[4rem] p-10 md:p-20 border-[3px] border-[#e2b07e]/20 relative overflow-hidden">
          <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none [background-image:radial-gradient(#e2b07e_1px,transparent_1px)] [background-size:20px_20px]"></div>
          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-16 gap-8 relative z-10">

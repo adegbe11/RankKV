@@ -74,9 +74,8 @@ const App: React.FC = () => {
         if (resultsEl) resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     } catch (err: any) {
-      console.error(err);
-      const msg = err.message || 'RankKV analysis engines are temporarily overloaded. Please wait 10 seconds and try again.';
-      setError(msg);
+      console.error("Search Error:", err);
+      setError(err.message || 'RankKV analysis engines are temporarily overloaded. Please wait 10 seconds and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +96,7 @@ const App: React.FC = () => {
           externalConfig={searchState}
         />
 
-        {history.length > 0 && !analysis && !isLoading && (
+        {history.length > 0 && !analysis && !isLoading && !error && (
           <div className="max-w-4xl mx-auto px-4 mb-20 animate-entry [animation-delay:400ms]">
             <div className="flex flex-wrap items-center justify-center gap-3">
               <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mr-2">Recent Checks:</span>
@@ -116,19 +115,42 @@ const App: React.FC = () => {
         )}
         
         {error && (
-          <div className="max-w-4xl mx-auto px-4 mb-12">
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-8 py-5 rounded-[2rem] flex flex-col gap-2 shadow-sm">
-              <div className="flex items-center gap-4">
-                <i className="fas fa-exclamation-triangle text-xl"></i>
-                <span className="font-bold text-lg">Search Failed</span>
+          <div className="max-w-4xl mx-auto px-4 mb-24 animate-entry">
+            <div className="bg-white border-2 border-rose-100 rounded-[3rem] p-10 shadow-xl shadow-rose-50/50">
+              <div className="flex items-start gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 shrink-0">
+                  <i className="fas fa-exclamation-circle text-2xl"></i>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Search Capability Limited</h3>
+                  <p className="text-slate-600 font-medium mb-6 leading-relaxed">
+                    {error}
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => handleSearch(searchState)}
+                      className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-lg active:scale-95"
+                    >
+                      Try Again
+                    </button>
+                    {error.includes("API_KEY") && (
+                      <a 
+                        href="https://vercel.com/dashboard" 
+                        target="_blank" 
+                        className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 underline"
+                      >
+                        Check Vercel Settings
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
-              <p className="text-sm opacity-80 pl-10">{error}</p>
             </div>
           </div>
         )}
 
         <div id="results-view" className="scroll-mt-24">
-          {analysis && (
+          {analysis && !error && (
             <KeywordResults 
               data={analysis} 
               onKeywordClick={triggerKeywordSearch}
