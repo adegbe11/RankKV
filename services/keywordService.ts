@@ -1,39 +1,46 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { KeywordAnalysis, SearchConfig } from "../types";
 
+const MAX_RETRIES = 2;
+const INITIAL_BACKOFF = 1500; 
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const getKeywordAnalysis = async (config: SearchConfig): Promise<KeywordAnalysis> => {
   const apiKey = process.env.API_KEY;
   
   if (!apiKey || apiKey === 'undefined' || apiKey === '') {
-    throw new Error("RankKV Configuration Error: API_KEY is missing. Please ensure you have added the API_KEY to your Vercel Environment Variables and redeployed.");
+    throw new Error("RankKV Configuration Error: API_KEY is missing in Vercel. Please add it and redeploy.");
   }
 
-  // Create instance right before call to ensure fresh key from env
-  const ai = new GoogleGenAI({ apiKey });
-  
-  const prompt = `Task: Perform an expert-level SEO keyword analysis for "${config.query}" on the platform "${config.platform}".
-  Region: ${config.country}
-  Language: ${config.language}
+  const generateData = async (useSearchTool: boolean) => {
+    const ai = new GoogleGenAI({ apiKey });
+    
+    const prompt = `Task: Perform expert SEO keyword analysis for "${config.query}" on ${config.platform}.
+    Region: ${config.country} | Language: ${config.language}
+    ${useSearchTool ? 'Use Google Search grounding for 2025 real-time accuracy.' : 'Use your internal high-performance knowledge base to estimate 2024-2025 metrics.'}
 
-  Instructions:
-  1. Use Google Search grounding to find the most recent trends (late 2024 / early 2025).
-  2. Estimate monthly search volume, CPC (USD), and competition difficulty (0 to 1).
-  3. Generate 12 months of historical/forecasted trend data.
-  4. Provide 12 highly relevant long-tail keyword variations.
-  5. Create 3 topical clusters for site architecture.
-  6. Provide a concise, high-impact SEO strategy summary.
-  
-  Format Requirement: Return ONLY valid JSON matching the provided schema.`;
+    Requirements:
+    - Monthly Volume, CPC (USD), Competition (0-1).
+    - 12-month Trend data.
+    - 12 Related long-tail keywords.
+    - 3 Topical clusters.
+    - High-impact SEO strategy summary.
+    - Intent type.
+    
+    Return ONLY valid JSON.`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+    const modelConfig: any = {
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
-        // Adding thinking budget allows the model to process search results before formatting them
-        thinkingConfig: { thinkingBudget: 2048 },
         responseMimeType: "application/json",
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
+        ],
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -95,14 +102,17 @@ export const getKeywordAnalysis = async (config: SearchConfig): Promise<KeywordA
           required: ["keyword", "volume", "cpc", "competition", "trend", "related", "summary", "intent", "clusters", "platformComparison", "confidenceScore"]
         }
       }
-    });
+    };
 
+    if (useSearchTool) {
+      modelConfig.config.tools = [{ googleSearch: {} }];
+    }
+
+    const response = await ai.models.generateContent(modelConfig);
     const text = response.text || "";
-    if (!text) throw new Error("The RankKV engine returned an empty response. Please try a different keyword.");
+    if (!text) throw new Error("Empty response from engine.");
 
     const result = JSON.parse(text);
-
-    // Filter and format grounding sources
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
       ?.map((chunk: any) => ({
         title: chunk.web?.title || 'Search Source',
@@ -111,18 +121,32 @@ export const getKeywordAnalysis = async (config: SearchConfig): Promise<KeywordA
       .filter((s: any) => s.uri) || [];
 
     return { ...result, sources };
-  } catch (error: any) {
-    console.error("RankKV Engine Internal Error:", error);
-    
-    // Pass through specific API errors to help the user debug their setup
-    if (error.message?.includes("API_KEY") || error.message?.includes("401") || error.message?.includes("403")) {
-      throw new Error("RankKV Authentication Error: Your API Key might be invalid or not yet active. Check your Vercel settings and redeploy.");
-    }
-    
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("RankKV is currently at capacity. Please wait 60 seconds and try again.");
-    }
+  };
 
-    throw new Error(`RankKV could not process "${config.query}". Error: ${error.message || "Unknown connectivity issue."}`);
+  // EXECUTION LOGIC: Try with Search first, Fallback to AI Estimation on failure
+  let attempts = 0;
+  while (attempts <= MAX_RETRIES) {
+    try {
+      // First attempt always tries real-time search
+      return await generateData(attempts === 0);
+    } catch (error: any) {
+      const isRateLimit = error.message?.includes("429") || error.message?.includes("quota") || error.message?.includes("capacity");
+      
+      // If it's a rate limit on the first attempt, immediately try without the search tool
+      if (isRateLimit && attempts === 0) {
+        console.warn("RankKV: Search tool at capacity. Falling back to Deep AI Estimation...");
+        attempts++;
+        continue;
+      }
+
+      if (attempts >= MAX_RETRIES) {
+        throw new Error(`RankKV Error: ${error.message || "The engine is currently unavailable."}`);
+      }
+
+      attempts++;
+      await sleep(INITIAL_BACKOFF * attempts);
+    }
   }
+
+  throw new Error("RankKV: Connection timeout.");
 };
